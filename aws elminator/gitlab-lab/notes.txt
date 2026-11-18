@@ -1,0 +1,11 @@
+=====================================================================
+ GitLab:   http://192.168.184.129:8929        user: root   password: Lab-a6ab2c75482fef
+ Projects: http://192.168.184.129:8929/floci-lab
+ Floci:    http://192.168.184.129:4566        Console: http://192.168.184.129:4500
+=====================================================================
+Next:
+ 1. Open floci-infra -> Build -> Pipelines. Pushing started a pipeline.
+ 2. When 'plan' finishes, press ▶ on 'apply' (manual approval gate).
+ 3. After 'verify' passes, it triggers floci-app's pipeline automatically.
+ 4. Watch floci-app: unit tests -> build -> deploy -> integration tests.
+ 5. See the resources in the Floci console.

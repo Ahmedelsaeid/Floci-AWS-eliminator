@@ -1,0 +1,57 @@
+# GitLab CE + GitLab Runner, on the same Docker network as Floci (floci-net),
+# so pipeline jobs reach Floci at http://floci:4566 and GitLab at http://gitlab:8929.
+#
+# Start Floci first (it creates floci-net), then: ./setup-gitlab.sh
+name: gitlab-lab
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    hostname: gitlab
+    restart: unless-stopped
+    shm_size: "256m"
+    ports:
+      - "8929:8929"     # web UI + API + git over HTTP
+      - "2224:22"       # git over SSH
+    environment:
+      GITLAB_ROOT_PASSWORD: ${GITLAB_ROOT_PASSWORD}
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://${VM_IP}:8929'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+        gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
+        gitlab_rails['terraform_state_enabled'] = true
+        # --- Lab-sized memory footprint ---
+        puma['worker_processes'] = 0
+        sidekiq['concurrency'] = 10
+        prometheus_monitoring['enable'] = false
+        gitlab_rails['env'] = { 'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000' }
+        gitaly['configuration'] = { concurrency: [ { 'rpc' => '/gitaly.SmartHTTPService/PostReceivePack', 'max_per_repo' => 3 }, { 'rpc' => '/gitaly.SSHService/SSHUploadPack', 'max_per_repo' => 3 } ] }
+        registry['enable'] = false
+        gitlab_pages['enable'] = false
+        gitlab_kas['enable'] = false
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    networks: [floci-net]
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: unless-stopped
+    depends_on: [gitlab]
+    volumes:
+      - runner-config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock   # docker executor: each job runs in its own container
+    networks: [floci-net]
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+  runner-config:
+
+networks:
+  floci-net:
+    external: true
