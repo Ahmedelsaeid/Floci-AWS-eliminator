@@ -1,0 +1,22 @@
+name: floci-lab
+
+services:
+  floci:
+    image: floci/floci:latest
+    container_name: floci
+    ports:
+      - "4566:4566"          # all AWS APIs (same port as LocalStack)
+    volumes:
+      # Needed for container-backed services: Lambda, RDS, ElastiCache, ECS, EKS, OpenSearch
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+    environment:
+      FLOCI_RUN_AS_ROOT: "true"                    # lets Floci use the Docker socket on Docker Desktop
+      FLOCI_SERVICES_DOCKER_NETWORK: floci-net     # Lambda/RDS containers join this network
+      FLOCI_SERVICES_LAMBDA_EPHEMERAL: "false"     # keep Lambda containers warm between invokes
+      # QUARKUS_LOG_LEVEL: DEBUG                   # uncomment for verbose logs
+    restart: unless-stopped
+
+networks:
+  default:
+    name: floci-net
